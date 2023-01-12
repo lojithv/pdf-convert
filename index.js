@@ -98,9 +98,9 @@ function convertPage(pdfDocument,i,numPages){
           console.log(
             "Finished converting first page of PDF file to a PNG image."
           );
-          if(numPages>i){
-            convertPage(pdfDocument,i+1,numPages)
-          }
+          // if(numPages>i){
+          //   convertPage(pdfDocument,i+1,numPages)
+          // }
         }
       });
       page.cleanup();
@@ -116,9 +116,9 @@ function convertPage(pdfDocument,i,numPages){
       console.log(pdfDocument.numPages)
   
       // Get the first page.
-      // for (let i = 1; i < pdfDocument.numPages; i++) {
-        convertPage(pdfDocument,1,pdfDocument.numPages)
-      // }
+      for (let i = 1; i < pdfDocument.numPages; i++) {
+        convertPage(pdfDocument,i,pdfDocument.numPages)
+      }
     });
 
   } catch (reason) {
