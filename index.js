@@ -17,7 +17,7 @@ const Canvas = require("canvas");
 const assert = require("assert").strict;
 const fs = require("fs");
 
-function NodeCanvasFactory() {}
+function NodeCanvasFactory() { }
 NodeCanvasFactory.prototype = {
   create: function NodeCanvasFactory_create(width, height) {
     assert(width > 0 && height > 0, "Invalid canvas size");
@@ -71,45 +71,56 @@ const loadingTask = pdfjsLib.getDocument({
   standardFontDataUrl: STANDARD_FONT_DATA_URL,
 });
 
+function convertPage(pdfDocument,i,numPages){
+  console.log(i)
+  pdfDocument.getPage(i).then(async (page) => {
+    // Render the page on a Node canvas with 100% scale.
+    const viewport = page.getViewport({ scale: 1.0 });
+    const canvasFactory = new NodeCanvasFactory();
+    const canvasAndContext = canvasFactory.create(
+      viewport.width,
+      viewport.height
+    );
+    const renderContext = {
+      canvasContext: canvasAndContext.context,
+      viewport,
+      canvasFactory,
+    };
+
+    const renderTask = page.render(renderContext);
+    renderTask.promise.then(() => {
+      // Convert the canvas to an image buffer.
+      const image = canvasAndContext.canvas.toBuffer();
+      fs.writeFile(`uploads/output${i}.png`, image, function (error) {
+        if (error) {
+          console.error("Error: " + error);
+        } else {
+          console.log(
+            "Finished converting first page of PDF file to a PNG image."
+          );
+          if(numPages>i){
+            convertPage(pdfDocument,i+1,numPages)
+          }
+        }
+      });
+      page.cleanup();
+      // Release page resources.
+    });
+  });
+}
+
 (async function () {
   try {
-    const pdfDocument = await loadingTask.promise;
-    console.log("# PDF document loaded.");
-    console.log(pdfDocument.numPages)
-    // Get the first page.
-    for(let i = 1; i < pdfDocument.numPages; i++){
-        console.log(i)
-        const page = await pdfDocument.getPage(i);
-        // Render the page on a Node canvas with 100% scale.
-        const viewport = page.getViewport({ scale: 1.0 });
-        const canvasFactory = new NodeCanvasFactory();
-        const canvasAndContext = canvasFactory.create(
-          viewport.width,
-          viewport.height
-        );
-        const renderContext = {
-          canvasContext: canvasAndContext.context,
-          viewport,
-          canvasFactory,
-        };
-    
-        const renderTask = page.render(renderContext);
-        await renderTask.promise;
-        // Convert the canvas to an image buffer.
-        const image = canvasAndContext.canvas.toBuffer();
-        fs.writeFile("output.png", image, function (error) {
-          if (error) {
-            console.error("Error: " + error);
-          } else {
-            console.log(
-              "Finished converting first page of PDF file to a PNG image."
-            );
-          }
-        });
-        // Release page resources.
-    }
+    loadingTask.promise.then((pdfDocument)=>{
+      console.log("# PDF document loaded.");
+      console.log(pdfDocument.numPages)
+  
+      // Get the first page.
+      // for (let i = 1; i < pdfDocument.numPages; i++) {
+        convertPage(pdfDocument,1,pdfDocument.numPages)
+      // }
+    });
 
-    page.cleanup();
   } catch (reason) {
     console.log(reason);
   }
